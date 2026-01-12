@@ -1,0 +1,6 @@
+../Core/Src/uart_manager.c:41:6:uart_manager_init	24	static
+../Core/Src/uart_manager.c:51:6:onReceiveData	16	static
+../Core/Src/uart_manager.c:59:13:push_to_tx_queue	24	static
+../Core/Src/uart_manager.c:69:6:uart_manager_send_data	16	static
+../Core/Src/uart_manager.c:84:6:uart_control	16	static
+../Core/Src/uart_manager.c:113:6:onSendDone	4	static

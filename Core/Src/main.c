@@ -1,28 +1,28 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2025 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2025 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
-
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include"queue.h"
+#include "log.h"
+#include "uart_manager.h"
 #include <string.h>
 /* USER CODE END Includes */
 
@@ -45,14 +45,11 @@
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
-uint8_t buffer_tx[64];
-uint8_t buffer_rx[100];
-uint8_t buftemp[10];
-uint32_t total_byte = 0;
-uint32_t pre_total_byte = 0;
-static uint8_t receiveByte;
-queue mQueue;
-static uint32_t now ;
+static uint32_t now;
+static uint32_t total_payload = 0;
+static uint32_t total_packet = 0;
+static volatile uint8_t receiveByte;
+uint8_t buffer[20]; 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -65,37 +62,54 @@ static void MX_USART1_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
-	  if(huart->Instance == USART1){
-		  queue_push_byte(&mQueue, receiveByte);
-		  GPIOC->BSRR = (1 << 13);
-		  HAL_UART_Receive_IT(&huart1, (uint8_t*) &receiveByte, 1); // doi nhạn doc 1 byte
-	  }
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+  if (huart->Instance == USART1)
+  {
+    onReceiveData((uint8_t *)&receiveByte, 1);
+    GPIOC->BSRR = (1 << 13);
+    HAL_UART_Receive_IT(&huart1, (uint8_t *)&receiveByte, 1); // doi nhạn doc 1 byte
+  }
 }
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
-    if(huart->Instance == USART1)
-    {
-        // Truyền xong, có thể xử lý tiếp nếu muốn
-    }
+  if (huart->Instance == USART1)
+  {
+    onSendDone();
+  }
 }
 
-void u32_to_str(uint32_t value, char *buffer)
+void u32_to_str(uint32_t value, char *buffer, uint16_t buffer_size)
 {
-    sprintf(buffer, "%lu", (unsigned long)value);
+  memset(buffer, 0, buffer_size);
+  sprintf(buffer, "%lu", (unsigned long)value);
 }
 
-void uart_send(const char *buff)
+void uart_send(uint8_t *buff, uint16_t length)
 {
-	 HAL_UART_Transmit_IT(&huart1, buff, strlen(buff));
+  HAL_UART_Transmit_IT(&huart1, (const uint8_t *)buff, length);
+}
+
+void receive_callback(uint8_t *data, uint16_t length)
+{
+  total_payload += length;
+  total_packet += 1;
+  log_printf("nhan duoc %lu byte: total byte %lu\n", total_payload, total_packet);
+  u32_to_str(total_payload, (char *)buffer, sizeof(buffer));
+  uart_manager_send_data(buffer, strlen((char *)buffer));
+}
+
+void receive_fail_callback(uint8_t *data, uint16_t length)
+{
+  log_println("nhan that bai");
 }
 /* USER CODE END 0 */
 
 /**
-  * @brief  The application entry point.
-  * @retval int
-  */
+ * @brief  The application entry point.
+ * @retval int
+ */
 int main(void)
 {
 
@@ -109,34 +123,34 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-  queue_init(&mQueue, buffer_rx, sizeof(buffer_rx));
   /* USER CODE END Init */
 
   /* Configure the system clock */
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-  // Enable GPIOC clock
+  log_init();
+  //  uart_manager_init();
+  now = HAL_GetTick();
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-
-  RCC->APB2ENR |= RCC_APB2ENR_IOPCEN|RCC_APB2ENR_IOPBEN;
+  uart_manager_init(receive_callback, receive_fail_callback, uart_send);
+  RCC->APB2ENR |= RCC_APB2ENR_IOPCEN | RCC_APB2ENR_IOPBEN;
 
   // PC13 output push-pull 2MHz
   GPIOC->CRH &= ~(0xF << 20);
-  GPIOC->CRH |=  (0x2 << 20);
-
+  GPIOC->CRH |= (0x2 << 20);
 
   // PB9 input
-  GPIOB->CRH &= ~(0xF << 4); //cLEAR
-  GPIOB->CRH |=  (0x8 << 4); // INPUT
-  GPIOB->ODR |=(1<<9); // PULL up
-  uart_send("start app\n");
-  HAL_UART_Receive_IT(&huart1, (uint8_t*) &receiveByte, 1);
+  GPIOB->CRH &= ~(0xF << 4); // cLEAR
+  GPIOB->CRH |= (0x8 << 4);  // INPUT
+  GPIOB->ODR |= (1 << 9);    // PULL up
+  HAL_UART_Receive_IT(&huart1, (uint8_t *)&receiveByte, 1);
+  log_print("start app\n");
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -146,52 +160,31 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-//	  if((GPIOB->IDR & (1<<9)) == 0){
-//
-//	  }else{
-//
-//	  }
-//	  GPIOC->BSRR = (1 << (13 + 16)); // LOW → LED ON
-//HAL_Delay(500);
-//GPIOC->BSRR = (1 << 13);        // HIGH → LED OFF
-HAL_Delay(10); // 10ms
-
-	  uint16_t getData = queue_pop(&mQueue, buftemp, sizeof(buftemp));
-	  if(getData>0){
-		  total_byte += getData;
-	  }
-
-	  if(HAL_GetTick() - now > 1000){
-
-		  if(pre_total_byte != total_byte){
-			  int index =0;
-			  memset(buffer_tx, 0, sizeof(buffer_tx));
-			  memcpy(buffer_tx, "Receive: ", strlen( "Receive: "));
-			  index+= strlen( "Receive: ");
-			  u32_to_str(total_byte, buffer_tx+index);
-			  memcpy(buffer_tx+ strlen(buffer_tx), "\n", strlen( "\n"));
-			  uart_send((const char *)buffer_tx);
-			  pre_total_byte = total_byte;
-		  }
-		  now = HAL_GetTick() ;
-	  }
-
+    //	  if((GPIOB->IDR & (1<<9)) == 0){
+    //
+    //	  }else{
+    //
+    //	  }
+    //	  GPIOC->BSRR = (1 << (13 + 16)); // LOW → LED ON
+    // HAL_Delay(500);
+    // GPIOC->BSRR = (1 << 13);        // HIGH → LED OFF
+    uart_control();
   }
   /* USER CODE END 3 */
 }
 
 /**
-  * @brief System Clock Configuration
-  * @retval None
-  */
+ * @brief System Clock Configuration
+ * @retval None
+ */
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
   /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
+   * in the RCC_OscInitTypeDef structure.
+   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
@@ -202,9 +195,8 @@ void SystemClock_Config(void)
   }
 
   /** Initializes the CPU, AHB and APB buses clocks
-  */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+   */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
@@ -216,13 +208,11 @@ void SystemClock_Config(void)
   }
 }
 
-
-
 /**
-  * @brief USART1 Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief USART1 Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_USART1_UART_Init(void)
 {
 
@@ -251,10 +241,10 @@ static void MX_USART1_UART_Init(void)
 }
 
 /**
-  * @brief GPIO Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief GPIO Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -286,9 +276,9 @@ static void MX_GPIO_Init(void)
 /* USER CODE END 4 */
 
 /**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
+ * @brief  This function is executed in case of error occurrence.
+ * @retval None
+ */
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
@@ -301,12 +291,12 @@ void Error_Handler(void)
 }
 #ifdef USE_FULL_ASSERT
 /**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
-  * @retval None
-  */
+ * @brief  Reports the name of the source file and the source line number
+ *         where the assert_param error has occurred.
+ * @param  file: pointer to the source file name
+ * @param  line: assert_param error line source number
+ * @retval None
+ */
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */

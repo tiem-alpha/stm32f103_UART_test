@@ -1,0 +1,4 @@
+../Core/Src/crc16.c:46:6:crc16_init	1
+../Core/Src/crc16.c:50:10:crc16_cal	3
+../Core/Src/crc16.c:69:6:crc16_frag_cal	3
+../Core/Src/crc16.c:84:6:crc16_byte_cal	1

@@ -1,9 +1,9 @@
 ../Core/Src/queue.c:21:6:queue_init	24	static
 ../Core/Src/queue.c:33:9:queue_pop_byte	16	static
-../Core/Src/queue.c:46:10:queue_pop	32	static
-../Core/Src/queue.c:63:9:queue_push_byte	16	static
-../Core/Src/queue.c:75:10:queue_push	32	static
-../Core/Src/queue.c:88:9:queue_peek	16	static
+../Core/Src/queue.c:47:10:queue_pop	32	static
+../Core/Src/queue.c:64:9:queue_push_byte	16	static
+../Core/Src/queue.c:76:10:queue_push	32	static
+../Core/Src/queue.c:89:9:queue_peek	16	static
 ../Core/Src/queue.c:99:6:queue_is_full	16	static
 ../Core/Src/queue.c:108:6:queue_is_empty	16	static
 ../Core/Src/queue.c:117:10:queue_get_space	16	static
