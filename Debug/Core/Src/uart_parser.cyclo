@@ -1,4 +1,4 @@
 ../Core/Src/uart_parser.c:19:6:uart_parser_init	1
-../Core/Src/uart_parser.c:30:6:uart_parser_pack_data	4
+../Core/Src/uart_parser.c:30:6:uart_parser_pack_data	3
 ../Core/Src/uart_parser.c:52:6:uart_parser_unpack_data	6
 ../Core/Src/uart_parser.c:83:9:uart_parser_unpack_data_byte	5
