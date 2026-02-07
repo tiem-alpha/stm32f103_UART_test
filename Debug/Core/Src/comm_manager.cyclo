@@ -1,0 +1,5 @@
+../Core/Src/comm_manager.c:34:9:comm_manager_init	5
+../Core/Src/comm_manager.c:71:6:onReceiveData	1
+../Core/Src/comm_manager.c:77:6:comm_manager_send_data	3
+../Core/Src/comm_manager.c:100:6:comm_control	10
+../Core/Src/comm_manager.c:149:6:onSendDone	1

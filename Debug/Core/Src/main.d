@@ -23,8 +23,8 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h \
  ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h \
  ../Core/Inc/log.h ../Core/Inc/SEGGER_RTT.h ../Core/Inc/SEGGER_RTT_Conf.h \
- ../Core/Inc/uart_manager.h ../Core/Inc/uart_parser.h \
- ../Core/Inc/data_type.h
+ ../Core/Inc/comm_manager.h ../Core/Inc/packer.h ../Core/Inc/data_type.h \
+ ../Core/Inc/queue.h ../Core/Inc/my_packer.h
 ../Core/Inc/main.h:
 ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h:
 ../Core/Inc/stm32f1xx_hal_conf.h:
@@ -52,6 +52,8 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
 ../Core/Inc/log.h:
 ../Core/Inc/SEGGER_RTT.h:
 ../Core/Inc/SEGGER_RTT_Conf.h:
-../Core/Inc/uart_manager.h:
-../Core/Inc/uart_parser.h:
+../Core/Inc/comm_manager.h:
+../Core/Inc/packer.h:
 ../Core/Inc/data_type.h:
+../Core/Inc/queue.h:
+../Core/Inc/my_packer.h:

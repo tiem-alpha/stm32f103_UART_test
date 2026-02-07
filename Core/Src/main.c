@@ -22,7 +22,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "log.h"
-#include "uart_manager.h"
+#include "comm_manager.h"
+#include"my_packer.h"
 #include <string.h>
 /* USER CODE END Includes */
 
@@ -49,6 +50,12 @@ static uint32_t now;
 static uint32_t total_payload = 0;
 static uint32_t total_packet = 0;
 static volatile uint8_t receiveByte;
+CommManager_t uart1Com;
+Packer_t uartPacker = {
+		.pack = my_pack_data,
+		.unpack = my_unpack_data_state,
+};
+
 uint8_t buffer[20]; 
 /* USER CODE END PV */
 
@@ -66,8 +73,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
   if (huart->Instance == USART1)
   {
-    onReceiveData((uint8_t *)&receiveByte, 1);
-    GPIOC->BSRR = (1 << 13);
+    onReceiveData(&uart1Com,&receiveByte,1);
+//    GPIOC->BSRR = (1 << 13);
     HAL_UART_Receive_IT(&huart1, (uint8_t *)&receiveByte, 1); // doi nhạn doc 1 byte
   }
 }
@@ -76,7 +83,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
   if (huart->Instance == USART1)
   {
-    onSendDone();
+    onSendDone(&uart1Com);
   }
 }
 
@@ -97,10 +104,10 @@ void receive_callback(uint8_t *data, uint16_t length)
   total_packet += 1;
   log_printf("nhan duoc %lu byte: total byte %lu\n", total_payload, total_packet);
   u32_to_str(total_payload, (char *)buffer, sizeof(buffer));
-  uart_manager_send_data(buffer, strlen((char *)buffer));
+  comm_manager_send_data(&uart1Com,data,length);
 }
 
-void receive_fail_callback(uint8_t *data, uint16_t length)
+void receive_fail_callback(uint8_t error)
 {
   log_println("nhan that bai");
 }
@@ -138,7 +145,8 @@ int main(void)
   MX_GPIO_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  uart_manager_init(receive_callback, receive_fail_callback, uart_send);
+//  uart_manager_init(receive_callback, receive_fail_callback, uart_send);
+  comm_manager_init(&uart1Com, &uartPacker, receive_callback, receive_fail_callback, uart_send);
   RCC->APB2ENR |= RCC_APB2ENR_IOPCEN | RCC_APB2ENR_IOPBEN;
 
   // PC13 output push-pull 2MHz
@@ -168,7 +176,7 @@ int main(void)
     //	  GPIOC->BSRR = (1 << (13 + 16)); // LOW → LED ON
     // HAL_Delay(500);
     // GPIOC->BSRR = (1 << 13);        // HIGH → LED OFF
-    uart_control();
+    comm_control(&uart1Com);
   }
   /* USER CODE END 3 */
 }
